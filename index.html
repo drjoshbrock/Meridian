@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1a1a1a" />
+  <title>Meridian — Markdown</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="https://esm.sh/katex@0.16.11/dist/katex.min.css" />
+  <link rel="stylesheet" href="https://esm.sh/highlight.js@11.10.0/styles/github.css" id="hljs-light" />
+  <link rel="stylesheet" href="https://esm.sh/highlight.js@11.10.0/styles/github-dark.css" id="hljs-dark" disabled />
+
+  <script type="importmap">
+  {
+    "imports": {
+      "@codemirror/state": "https://esm.sh/@codemirror/state@6.4.1",
+      "@codemirror/view": "https://esm.sh/@codemirror/view@6.34.1",
+      "@codemirror/commands": "https://esm.sh/@codemirror/commands@6.7.1",
+      "@codemirror/lang-markdown": "https://esm.sh/@codemirror/lang-markdown@6.3.0",
+      "@codemirror/language": "https://esm.sh/@codemirror/language@6.10.3",
+      "@codemirror/search": "https://esm.sh/@codemirror/search@6.5.6",
+      "@codemirror/autocomplete": "https://esm.sh/@codemirror/autocomplete@6.18.1",
+      "marked": "https://esm.sh/marked@14.1.3",
+      "highlight.js": "https://esm.sh/highlight.js@11.10.0",
+      "katex": "https://esm.sh/katex@0.16.11",
+      "mermaid": "https://esm.sh/mermaid@11.4.0",
+      "dompurify": "https://esm.sh/dompurify@3.2.0"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="toolbar">
+    <div class="toolbar-group">
+      <button id="btn-new" title="New (Ctrl/Cmd+N)">New</button>
+      <button id="btn-open" title="Open (Ctrl/Cmd+O)">Open</button>
+      <button id="btn-save" title="Save (Ctrl/Cmd+S)">Save</button>
+      <button id="btn-save-as" title="Save As (Shift+Ctrl/Cmd+S)">Save As</button>
+    </div>
+    <div class="toolbar-title">
+      <span id="doc-title">Untitled.md</span>
+      <span id="dirty-indicator" hidden>•</span>
+    </div>
+    <div class="toolbar-group">
+      <button class="mode-btn" data-mode="edit" title="Editor only">Edit</button>
+      <button class="mode-btn active" data-mode="split" title="Split view">Split</button>
+      <button class="mode-btn" data-mode="preview" title="Preview only">Preview</button>
+      <button id="btn-outline" title="Toggle outline">Outline</button>
+      <button id="btn-print" title="Print / Export PDF">Print</button>
+      <button id="btn-theme" title="Toggle theme">Theme</button>
+    </div>
+  </header>
+
+  <main class="workspace" data-mode="split">
+    <aside class="outline" hidden>
+      <h2>Outline</h2>
+      <nav id="outline-list"></nav>
+    </aside>
+    <section class="editor-pane">
+      <div id="editor"></div>
+    </section>
+    <section class="preview-pane">
+      <article id="preview" class="markdown-body"></article>
+    </section>
+  </main>
+
+  <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown" hidden />
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
