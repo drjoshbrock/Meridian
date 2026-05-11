@@ -169,6 +169,11 @@
 <div class="drop-overlay" aria-hidden="true">Drop a markdown file to open it</div>
 
 <script type="module">
+window.addEventListener("error", (e) =>
+  console.error("[Meridian] Uncaught error:", e.message, e.error));
+window.addEventListener("unhandledrejection", (e) =>
+  console.error("[Meridian] Unhandled rejection:", e.reason));
+
 import { marked } from "marked";
 import hljs from "highlight.js";
 import { EditorState, EditorSelection } from "@codemirror/state";
@@ -590,17 +595,18 @@ async function ensureWritable(handle) {
 }
 
 async function openFile() {
-  try {
-    if (hasFSA) {
-      const [h] = await showOpenFilePicker({ types: fileTypes, multiple: false, mode: "readwrite" });
+  if (hasFSA) {
+    try {
+      const [h] = await showOpenFilePicker({ types: fileTypes, multiple: false });
       await ensureWritable(h);
       const f = await h.getFile();
       loadDoc(await f.text(), f.name, h);
-      return;
+    } catch (e) {
+      if (e?.name === "AbortError") return;
+      console.error("Open failed:", e);
+      alert("Open failed: " + (e?.message || e));
     }
-  } catch (e) {
-    if (e?.name === "AbortError") return;
-    console.error("FS Access open failed, falling back:", e);
+    return;
   }
   pickViaInput();
 }
@@ -800,7 +806,12 @@ function init() {
   }
 }
 
-init();
+try { init(); }
+catch (e) {
+  console.error("[Meridian] init() failed:", e);
+  alert("Meridian failed to start: " + (e?.message || e) +
+        "\n\nOpen DevTools (Cmd+Option+I) → Console for details.");
+}
 </script>
 </body>
 </html>
