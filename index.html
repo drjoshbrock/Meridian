@@ -37,32 +37,52 @@
   button:hover, select:hover { background: var(--border); }
   button.on { background: var(--accent); color: #fff; }
   select { border-color: var(--border); padding: 4px 6px; max-width: 170px; }
-  .ws { display: grid; grid-template-columns: 0 1fr 1fr; min-height: 0; overflow: hidden; }
-  .ws:has(.outline:not([hidden])) { grid-template-columns: 220px 1fr 1fr; }
+  .ws { display: grid; grid-template-columns: 220px 1fr 0; min-height: 0; overflow: hidden; }
+  .ws:has(.outline[hidden]) { grid-template-columns: 0 1fr 0; }
+  .ws:has(.pv:not([hidden])) { grid-template-columns: 220px 1fr 1fr; }
+  .ws:has(.outline[hidden]):has(.pv:not([hidden])) { grid-template-columns: 0 1fr 1fr; }
   .outline {
     background: var(--bg-elev); border-right: 1px solid var(--border);
-    overflow-y: auto; padding: 12px;
+    overflow-y: auto; padding: 12px; color: var(--fg);
   }
   .outline h2 {
     font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
     color: var(--fg-mute); margin: 0 0 8px;
   }
-  .outline a {
-    display: block; padding: 4px 8px; font-size: 13px; color: var(--fg);
-    text-decoration: none; border-radius: 4px;
+  .outline ul { list-style: none; margin: 0; padding: 0; }
+  .outline ul ul { padding-left: 12px; }
+  .outline .ol-row {
+    display: flex; align-items: center; gap: 2px;
+    border-radius: 4px;
+  }
+  .outline .ol-row:hover { background: var(--border); }
+  .outline .ol-row a {
+    flex: 1; min-width: 0; padding: 3px 4px; font-size: 13px;
+    color: var(--fg); text-decoration: none;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .outline a:hover { background: var(--border); }
-  .outline a.l2 { padding-left: 16px; }
-  .outline a.l3 { padding-left: 24px; font-size: 12.5px; }
-  .outline a.l4 { padding-left: 32px; color: var(--fg-mute); }
-  .outline a.l5, .outline a.l6 { padding-left: 40px; color: var(--fg-mute); font-size: 12px; }
-  .ed { overflow: hidden; border-right: 1px solid var(--border); min-width: 0; background: var(--bg); }
+  .outline .ol-row.l4 a, .outline .ol-row.l5 a, .outline .ol-row.l6 a {
+    color: var(--fg-mute); font-size: 12.5px;
+  }
+  .outline .ol-toggle {
+    background: transparent; border: 0; cursor: pointer; padding: 0;
+    width: 16px; height: 18px; flex: none;
+    font-size: 9px; line-height: 1; color: var(--fg-mute);
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: transform .12s ease;
+  }
+  .outline .ol-toggle:hover { color: var(--fg); }
+  .outline .ol-spacer { width: 16px; flex: none; }
+  .outline li.collapsed > ul { display: none; }
+  .outline li.collapsed > .ol-row > .ol-toggle { transform: rotate(-90deg); }
+  .ed { overflow: hidden; border-right: 1px solid var(--border); min-width: 0; background: var(--bg); color: var(--fg); }
+  .ws:has(.pv[hidden]) .ed { border-right: none; }
   #editor { height: 100%; }
-  .pv { overflow-y: auto; min-width: 0; background: var(--bg); }
+  .pv { overflow-y: auto; min-width: 0; background: var(--bg); color: var(--fg); }
   .md {
     max-width: 780px; margin: 0 auto; padding: 40px 36px 96px;
     line-height: 1.7; font-size: 16px;
+    color: var(--fg); background: var(--bg);
   }
   .md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
     font-weight: 600; line-height: 1.25; margin: 1.8em 0 .6em;
@@ -107,9 +127,9 @@
     body { overflow: visible; height: auto; }
   }
   @media (max-width: 720px) {
-    .ws { grid-template-columns: 0 1fr 0; }
+    .ws { grid-template-columns: 0 1fr 0 !important; }
     .ws .pv { display: none; }
-    .ws:has(.outline:not([hidden])) { grid-template-columns: 220px 1fr 0; }
+    .ws:has(.outline:not([hidden])) { grid-template-columns: 220px 1fr 0 !important; }
   }
   .drop-overlay {
     position: fixed; inset: 0; pointer-events: none; z-index: 9999;
@@ -165,18 +185,19 @@
     <span id="status" class="status"></span>
   </div>
   <div class="grp">
-    <button id="outlineBtn" title="Toggle outline">Outline</button>
+    <button id="outlineBtn" class="on" title="Toggle outline">Outline</button>
+    <button id="previewBtn" title="Toggle preview">Preview</button>
     <button id="print" title="Print / Export PDF (Ctrl/Cmd+P)">Print</button>
     <select id="themeSelect" title="Theme"></select>
   </div>
 </header>
 <main class="ws">
-  <aside class="outline" hidden>
+  <aside class="outline">
     <h2>Outline</h2>
     <nav id="ol"></nav>
   </aside>
   <section class="ed"><div id="editor"></div></section>
-  <section class="pv"><article id="preview" class="md"></article></section>
+  <section class="pv" hidden><article id="preview" class="md"></article></section>
 </main>
 <input type="file" id="finput" accept=".md,.markdown,.txt,text/markdown" hidden>
 <div class="drop-overlay" aria-hidden="true">Drop a markdown file to open it</div>
@@ -189,7 +210,7 @@ window.addEventListener("unhandledrejection", (e) =>
 
 import { marked } from "marked";
 import hljs from "highlight.js";
-import { EditorState, EditorSelection } from "@codemirror/state";
+import { EditorState, EditorSelection, Compartment } from "@codemirror/state";
 import {
   EditorView, keymap, lineNumbers, highlightActiveLine,
   highlightActiveLineGutter, drawSelection, dropCursor
@@ -279,32 +300,40 @@ let renderToken = 0;
 let _mermaidMod = null;
 
 /* =================== CodeMirror editor =================== */
-const cmTheme = EditorView.theme({
-  "&": { height: "100%", fontSize: "14px",
-         backgroundColor: "var(--bg)", color: "var(--fg)" },
-  ".cm-scroller": {
-    fontFamily: 'ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace',
-    lineHeight: "1.65"
-  },
-  ".cm-content": { padding: "16px 0", caretColor: "var(--fg)" },
-  ".cm-line": { padding: "0 18px" },
-  ".cm-gutters": {
-    backgroundColor: "var(--bg)", color: "var(--fg-mute)",
-    borderRight: "1px solid var(--border)"
-  },
-  ".cm-activeLine, .cm-activeLineGutter": {
-    backgroundColor: "color-mix(in oklab, var(--fg) 6%, transparent)"
-  },
-  "&.cm-focused": { outline: "none" },
-  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--fg)" },
-  ".cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
-    backgroundColor: "color-mix(in oklab, var(--accent) 30%, transparent) !important"
-  },
-  ".cm-tooltip": {
-    backgroundColor: "var(--bg-elev)", color: "var(--fg)",
-    border: "1px solid var(--border)"
-  }
-});
+const themeCompartment = new Compartment();
+
+function makeCmTheme(isDark) {
+  return EditorView.theme({
+    "&": { height: "100%", fontSize: "14px",
+           backgroundColor: "var(--bg)", color: "var(--fg)" },
+    ".cm-scroller": {
+      fontFamily: 'ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace',
+      lineHeight: "1.65",
+      backgroundColor: "var(--bg)", color: "var(--fg)"
+    },
+    ".cm-content": {
+      padding: "16px 0", caretColor: "var(--fg)",
+      backgroundColor: "var(--bg)", color: "var(--fg)"
+    },
+    ".cm-line": { padding: "0 18px" },
+    ".cm-gutters": {
+      backgroundColor: "var(--bg)", color: "var(--fg-mute)",
+      borderRight: "1px solid var(--border)"
+    },
+    ".cm-activeLine, .cm-activeLineGutter": {
+      backgroundColor: "color-mix(in oklab, var(--fg) 6%, transparent)"
+    },
+    "&.cm-focused": { outline: "none" },
+    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--fg)" },
+    ".cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+      backgroundColor: "color-mix(in oklab, var(--accent) 30%, transparent) !important"
+    },
+    ".cm-tooltip": {
+      backgroundColor: "var(--bg-elev)", color: "var(--fg)",
+      border: "1px solid var(--border)"
+    }
+  }, { dark: isDark });
+}
 
 const mdHighlight = HighlightStyle.define([
   { tag: tg.heading1, fontSize: "1.35em", fontWeight: "700", color: "var(--fg)" },
@@ -366,7 +395,7 @@ function createEditor(parent, doc, onChange) {
         syntaxHighlighting(mdHighlight),
         markdown({ base: markdownLanguage }),
         EditorView.lineWrapping,
-        cmTheme,
+        themeCompartment.of(makeCmTheme(THEMES[state.theme]?.type === "dark")),
         keymap.of([
           ...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap,
           indentWithTab,
@@ -487,6 +516,18 @@ function escapeHtml(s) {
     ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
 
+function buildHeadingTree(items) {
+  const root = { level: 0, children: [] };
+  const stack = [root];
+  for (const h of items) {
+    while (stack[stack.length - 1].level >= h.level) stack.pop();
+    const node = { ...h, children: [] };
+    stack[stack.length - 1].children.push(node);
+    stack.push(node);
+  }
+  return root.children;
+}
+
 function renderOutline(items) {
   const ol = $("ol");
   ol.innerHTML = "";
@@ -495,16 +536,48 @@ function renderOutline(items) {
     d.className = "empty"; d.textContent = "No headings yet.";
     ol.appendChild(d); return;
   }
-  for (const h of items) {
-    const a = document.createElement("a");
-    a.textContent = h.text; a.href = "#" + h.id;
-    a.className = "l" + h.level; a.title = h.text;
-    a.onclick = (e) => {
-      e.preventDefault();
-      document.getElementById(h.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    };
-    ol.appendChild(a);
-  }
+
+  const renderNodes = (nodes) => {
+    const ul = document.createElement("ul");
+    for (const n of nodes) {
+      const li = document.createElement("li");
+      const row = document.createElement("div");
+      row.className = "ol-row l" + n.level;
+
+      if (n.children.length) {
+        const t = document.createElement("button");
+        t.type = "button";
+        t.className = "ol-toggle";
+        t.textContent = "▼";
+        t.setAttribute("aria-label", "Toggle " + n.text);
+        t.onclick = (e) => {
+          e.preventDefault(); e.stopPropagation();
+          li.classList.toggle("collapsed");
+        };
+        row.appendChild(t);
+      } else {
+        const s = document.createElement("span");
+        s.className = "ol-spacer";
+        row.appendChild(s);
+      }
+
+      const a = document.createElement("a");
+      a.textContent = n.text; a.href = "#" + n.id;
+      a.title = n.text;
+      a.onclick = (e) => {
+        e.preventDefault();
+        document.getElementById(n.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+      row.appendChild(a);
+      li.appendChild(row);
+
+      if (n.children.length) li.appendChild(renderNodes(n.children));
+      ul.appendChild(li);
+    }
+    return ul;
+  };
+
+  ol.appendChild(renderNodes(buildHeadingTree(items)));
 }
 
 /* =================== Theme system =================== */
@@ -516,11 +589,17 @@ function applyTheme(id) {
     document.documentElement.style.setProperty(k, v);
   }
   document.documentElement.dataset.theme = t.type;
+  document.body.dataset.theme = t.type;
   $("hljs-css").href = `https://esm.sh/highlight.js@11.10.0/styles/${t.hljs}.css`;
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t.vars["--bg"]);
   $("themeSelect").value = id;
   localStorage.setItem("meridian:theme", id);
-  if (state.view) renderPreview();
+  if (state.view) {
+    state.view.dispatch({
+      effects: themeCompartment.reconfigure(makeCmTheme(t.type === "dark"))
+    });
+    renderPreview();
+  }
 }
 
 function buildThemePicker() {
@@ -781,9 +860,30 @@ function init() {
   $("open").onclick = openFile;
   $("saveas").onclick = saveAs;
   $("print").onclick = () => window.print();
-  $("outlineBtn").onclick = () => {
-    const a = document.querySelector(".outline");
-    a.hidden = !a.hidden;
+
+  const outlineEl = document.querySelector(".outline");
+  const pvEl = document.querySelector(".pv");
+  const outlineBtn = $("outlineBtn");
+  const previewBtn = $("previewBtn");
+
+  const savedOutline = localStorage.getItem("meridian:outline");
+  outlineEl.hidden = savedOutline === "0";
+  outlineBtn.classList.toggle("on", !outlineEl.hidden);
+
+  const savedPreview = localStorage.getItem("meridian:preview");
+  pvEl.hidden = savedPreview !== "1";
+  previewBtn.classList.toggle("on", !pvEl.hidden);
+
+  outlineBtn.onclick = () => {
+    outlineEl.hidden = !outlineEl.hidden;
+    outlineBtn.classList.toggle("on", !outlineEl.hidden);
+    localStorage.setItem("meridian:outline", outlineEl.hidden ? "0" : "1");
+  };
+  previewBtn.onclick = () => {
+    pvEl.hidden = !pvEl.hidden;
+    previewBtn.classList.toggle("on", !pvEl.hidden);
+    localStorage.setItem("meridian:preview", pvEl.hidden ? "0" : "1");
+    if (!pvEl.hidden) renderPreview();
   };
 
   window.addEventListener("keydown", (e) => {
