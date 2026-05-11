@@ -1,4 +1,4 @@
-const CACHE = "meridian-v3";
+const CACHE = "meridian-v4";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (e) => {
