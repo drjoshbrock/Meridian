@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a1a1a">
+<title>Meridian — Markdown</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<link id="hljs-css" rel="stylesheet" href="https://esm.sh/highlight.js@11.10.0/styles/github.css">
+<style>
+  :root {
+    --bg: #fff; --bg-elev: #f7f7f8; --border: #e5e5e7;
+    --fg: #1a1a1a; --fg-mute: #666; --accent: #06c; --code-bg: #f4f4f6;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: grid; grid-template-rows: auto 1fr; height: 100vh; overflow: hidden; }
+  .bar {
+    display: flex; gap: 12px; padding: 8px 12px; align-items: center;
+    background: var(--bg-elev); border-bottom: 1px solid var(--border);
+  }
+  .bar > .grp { display: flex; gap: 4px; }
+  .title { flex: 1; text-align: center; color: var(--fg-mute); font-size: 13px;
+           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #dirty { color: var(--accent); font-weight: 700; margin-left: 4px; }
+  button, select {
+    background: transparent; border: 1px solid transparent; color: var(--fg);
+    padding: 5px 10px; font-size: 13px; border-radius: 6px; cursor: pointer; font: inherit;
+  }
+  button:hover, select:hover { background: var(--border); }
+  button.on { background: var(--accent); color: #fff; }
+  select { border-color: var(--border); padding: 4px 6px; max-width: 170px; }
+  .ws { display: grid; grid-template-columns: 0 1fr 1fr; min-height: 0; overflow: hidden; }
+  .ws[data-mode="edit"]    { grid-template-columns: 0 1fr 0; }
+  .ws[data-mode="preview"] { grid-template-columns: 0 0 1fr; }
+  .ws:has(.outline:not([hidden]))                      { grid-template-columns: 220px 1fr 1fr; }
+  .ws[data-mode="edit"]:has(.outline:not([hidden]))    { grid-template-columns: 220px 1fr 0; }
+  .ws[data-mode="preview"]:has(.outline:not([hidden])) { grid-template-columns: 220px 0 1fr; }
+  .outline {
+    background: var(--bg-elev); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 12px;
+  }
+  .outline h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--fg-mute); margin: 0 0 8px;
+  }
+  .outline a {
+    display: block; padding: 4px 8px; font-size: 13px; color: var(--fg);
+    text-decoration: none; border-radius: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .outline a:hover { background: var(--border); }
+  .outline a.l2 { padding-left: 16px; }
+  .outline a.l3 { padding-left: 24px; font-size: 12.5px; }
+  .outline a.l4 { padding-left: 32px; color: var(--fg-mute); }
+  .outline a.l5, .outline a.l6 { padding-left: 40px; color: var(--fg-mute); font-size: 12px; }
+  .ed { overflow: hidden; border-right: 1px solid var(--border); min-width: 0; background: var(--bg); }
+  .ws[data-mode="edit"] .ed { border-right: 0; }
+  #editor { height: 100%; }
+  .pv { overflow-y: auto; min-width: 0; background: var(--bg); }
+  .md {
+    max-width: 780px; margin: 0 auto; padding: 40px 36px 96px;
+    line-height: 1.7; font-size: 16px;
+  }
+  .md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
+    font-weight: 600; line-height: 1.25; margin: 1.8em 0 .6em;
+  }
+  .md h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: .3em; margin-top: 0; }
+  .md h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: .3em; }
+  .md h3 { font-size: 1.25em; }
+  .md a { color: var(--accent); }
+  .md p { margin: .8em 0; }
+  .md code:not(pre code) {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: .88em; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .md pre {
+    background: var(--code-bg); padding: 14px 16px; border-radius: 8px;
+    overflow-x: auto; font-size: 13.5px; line-height: 1.55; margin: 1em 0;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .md pre code.hljs { background: transparent; padding: 0; }
+  .md blockquote {
+    border-left: 3px solid var(--border); padding: 0 1em;
+    color: var(--fg-mute); margin: 1em 0;
+  }
+  .md table { border-collapse: collapse; margin: 1em 0; display: block; overflow-x: auto; font-size: .95em; }
+  .md th, .md td { border: 1px solid var(--border); padding: 6px 12px; text-align: left; }
+  .md th { background: var(--bg-elev); font-weight: 600; }
+  .md img { max-width: 100%; height: auto; }
+  .md hr { border: 0; border-top: 1px solid var(--border); margin: 2em 0; }
+  .md ul, .md ol { padding-left: 1.5em; }
+  .md li { margin: .25em 0; }
+  .md li > input[type="checkbox"] { margin-right: 6px; transform: translateY(1px); }
+  .md .mermaid { display: flex; justify-content: center; margin: 1.2em 0; }
+  .md .mermaid svg { max-width: 100%; height: auto; }
+  .mmd-err { color: #c33; background: var(--code-bg); padding: 10px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
+  .empty { color: var(--fg-mute); font-size: 12px; padding: 8px; }
+  .cm-editor.cm-focused { outline: none !important; }
+  @media print {
+    .bar, .outline, .ed { display: none !important; }
+    .ws { grid-template-columns: 0 0 1fr !important; }
+    .pv { overflow: visible; }
+    .md { max-width: none; padding: 0; }
+    body { overflow: visible; height: auto; }
+  }
+  @media (max-width: 720px) {
+    .ws[data-mode="split"] { grid-template-columns: 0 1fr 0; }
+    .ws[data-mode="split"] .pv { display: none; }
+  }
+</style>
+
+<script type="importmap">
+{
+  "imports": {
+    "marked": "https://esm.sh/marked@14.1.3",
+    "highlight.js": "https://esm.sh/highlight.js@11.10.0",
+    "mermaid": "https://esm.sh/mermaid@11.4.0",
+    "@codemirror/state": "https://esm.sh/@codemirror/state@6.4.1",
+    "@codemirror/view": "https://esm.sh/@codemirror/view@6.34.1",
+    "@codemirror/commands": "https://esm.sh/@codemirror/commands@6.7.1",
+    "@codemirror/lang-markdown": "https://esm.sh/@codemirror/lang-markdown@6.3.0",
+    "@codemirror/language": "https://esm.sh/@codemirror/language@6.10.3",
+    "@codemirror/search": "https://esm.sh/@codemirror/search@6.5.6",
+    "@codemirror/autocomplete": "https://esm.sh/@codemirror/autocomplete@6.18.1",
+    "@lezer/highlight": "https://esm.sh/@lezer/highlight@1.2.1"
+  }
+}
+</script>
+</head>
+<body>
+<header class="bar">
+  <div class="grp">
+    <button id="new" title="New (Ctrl/Cmd+N)">New</button>
+    <button id="open" title="Open (Ctrl/Cmd+O)">Open</button>
+    <button id="save" title="Save (Ctrl/Cmd+S)">Save</button>
+    <button id="saveas" title="Save As (Shift+Ctrl/Cmd+S)">Save As</button>
+  </div>
+  <div class="title"><span id="docName">Untitled.md</span><span id="dirty" hidden>•</span></div>
+  <div class="grp">
+    <button class="mode" data-mode="edit">Edit</button>
+    <button class="mode on" data-mode="split">Split</button>
+    <button class="mode" data-mode="preview">Preview</button>
+    <button id="outlineBtn" title="Toggle outline">Outline</button>
+    <button id="print" title="Print / Export PDF (Ctrl/Cmd+P)">Print</button>
+    <select id="themeSelect" title="Theme"></select>
+  </div>
+</header>
+<main class="ws" data-mode="split">
+  <aside class="outline" hidden>
+    <h2>Outline</h2>
+    <nav id="ol"></nav>
+  </aside>
+  <section class="ed"><div id="editor"></div></section>
+  <section class="pv"><article id="preview" class="md"></article></section>
+</main>
+<input type="file" id="finput" accept=".md,.markdown,.txt,text/markdown" hidden>
+
+<script type="module">
+import { marked } from "marked";
+import hljs from "highlight.js";
+import { EditorState, EditorSelection } from "@codemirror/state";
+import {
+  EditorView, keymap, lineNumbers, highlightActiveLine,
+  highlightActiveLineGutter, drawSelection, dropCursor
+} from "@codemirror/view";
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import {
+  syntaxHighlighting, indentOnInput, bracketMatching, HighlightStyle
+} from "@codemirror/language";
+import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
+import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import { tags as tg } from "@lezer/highlight";
+
+/* =====================================================================
+   THEMES — to add a new theme, append an entry below. Each theme needs:
+     - name:    Display name in the picker
+     - type:    "light" or "dark" (affects mermaid theme + system color)
+     - vars:    CSS custom properties for the UI (editor + preview follow)
+     - hljs:    highlight.js stylesheet name under
+                https://esm.sh/highlight.js@11.10.0/styles/<hljs>.css
+   ===================================================================== */
+const THEMES = {
+  light: {
+    name: "Light", type: "light", hljs: "github",
+    vars: { "--bg":"#ffffff","--bg-elev":"#f7f7f8","--border":"#e5e5e7",
+            "--fg":"#1a1a1a","--fg-mute":"#666","--accent":"#0066cc","--code-bg":"#f4f4f6" }
+  },
+  dark: {
+    name: "Dark", type: "dark", hljs: "github-dark",
+    vars: { "--bg":"#1a1a1a","--bg-elev":"#242427","--border":"#333337",
+            "--fg":"#e8e8ea","--fg-mute":"#8a8a8e","--accent":"#5aa3ff","--code-bg":"#2a2a2e" }
+  },
+  "solarized-light": {
+    name: "Solarized Light", type: "light", hljs: "base16/solarized-light",
+    vars: { "--bg":"#fdf6e3","--bg-elev":"#eee8d5","--border":"#93a1a1",
+            "--fg":"#586e75","--fg-mute":"#93a1a1","--accent":"#268bd2","--code-bg":"#eee8d5" }
+  },
+  "solarized-dark": {
+    name: "Solarized Dark", type: "dark", hljs: "base16/solarized-dark",
+    vars: { "--bg":"#002b36","--bg-elev":"#073642","--border":"#586e75",
+            "--fg":"#93a1a1","--fg-mute":"#657b83","--accent":"#268bd2","--code-bg":"#073642" }
+  },
+  dracula: {
+    name: "Dracula", type: "dark", hljs: "base16/dracula",
+    vars: { "--bg":"#282a36","--bg-elev":"#343746","--border":"#44475a",
+            "--fg":"#f8f8f2","--fg-mute":"#6272a4","--accent":"#bd93f9","--code-bg":"#343746" }
+  },
+  "catppuccin-mocha": {
+    name: "Catppuccin Mocha", type: "dark", hljs: "base16/ocean",
+    vars: { "--bg":"#1e1e2e","--bg-elev":"#181825","--border":"#313244",
+            "--fg":"#cdd6f4","--fg-mute":"#a6adc8","--accent":"#89b4fa","--code-bg":"#181825" }
+  },
+  "catppuccin-latte": {
+    name: "Catppuccin Latte", type: "light", hljs: "base16/atelier-cave-light",
+    vars: { "--bg":"#eff1f5","--bg-elev":"#e6e9ef","--border":"#bcc0cc",
+            "--fg":"#4c4f69","--fg-mute":"#6c6f85","--accent":"#1e66f5","--code-bg":"#e6e9ef" }
+  },
+  "gruvbox-dark": {
+    name: "Gruvbox Dark", type: "dark", hljs: "base16/gruvbox-dark-hard",
+    vars: { "--bg":"#282828","--bg-elev":"#3c3836","--border":"#504945",
+            "--fg":"#ebdbb2","--fg-mute":"#a89984","--accent":"#fabd2f","--code-bg":"#3c3836" }
+  },
+  "gruvbox-light": {
+    name: "Gruvbox Light", type: "light", hljs: "base16/gruvbox-light-hard",
+    vars: { "--bg":"#fbf1c7","--bg-elev":"#ebdbb2","--border":"#d5c4a1",
+            "--fg":"#3c3836","--fg-mute":"#7c6f64","--accent":"#b57614","--code-bg":"#ebdbb2" }
+  },
+  "tokyo-night": {
+    name: "Tokyo Night", type: "dark", hljs: "tokyo-night-dark",
+    vars: { "--bg":"#1a1b26","--bg-elev":"#16161e","--border":"#292e42",
+            "--fg":"#c0caf5","--fg-mute":"#565f89","--accent":"#7aa2f7","--code-bg":"#16161e" }
+  },
+  monokai: {
+    name: "Monokai", type: "dark", hljs: "monokai",
+    vars: { "--bg":"#272822","--bg-elev":"#1d1e19","--border":"#49483e",
+            "--fg":"#f8f8f2","--fg-mute":"#75715e","--accent":"#a6e22e","--code-bg":"#1d1e19" }
+  }
+};
+
+/* =================== App state =================== */
+const $ = (id) => document.getElementById(id);
+const state = {
+  view: null, handle: null, name: "Untitled.md",
+  dirty: false, lastSaved: "", theme: null
+};
+let renderToken = 0;
+let _mermaidMod = null;
+
+/* =================== CodeMirror editor =================== */
+const cmTheme = EditorView.theme({
+  "&": { height: "100%", fontSize: "14px",
+         backgroundColor: "var(--bg)", color: "var(--fg)" },
+  ".cm-scroller": {
+    fontFamily: 'ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace',
+    lineHeight: "1.65"
+  },
+  ".cm-content": { padding: "16px 0", caretColor: "var(--fg)" },
+  ".cm-line": { padding: "0 18px" },
+  ".cm-gutters": {
+    backgroundColor: "var(--bg)", color: "var(--fg-mute)",
+    borderRight: "1px solid var(--border)"
+  },
+  ".cm-activeLine, .cm-activeLineGutter": {
+    backgroundColor: "color-mix(in oklab, var(--fg) 6%, transparent)"
+  },
+  "&.cm-focused": { outline: "none" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--fg)" },
+  ".cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+    backgroundColor: "color-mix(in oklab, var(--accent) 30%, transparent) !important"
+  },
+  ".cm-tooltip": {
+    backgroundColor: "var(--bg-elev)", color: "var(--fg)",
+    border: "1px solid var(--border)"
+  }
+});
+
+const mdHighlight = HighlightStyle.define([
+  { tag: tg.heading1, fontSize: "1.35em", fontWeight: "700", color: "var(--fg)" },
+  { tag: tg.heading2, fontSize: "1.22em", fontWeight: "700", color: "var(--fg)" },
+  { tag: tg.heading3, fontSize: "1.12em", fontWeight: "700", color: "var(--fg)" },
+  { tag: [tg.heading4, tg.heading5, tg.heading6], fontWeight: "700", color: "var(--fg)" },
+  { tag: tg.strong, fontWeight: "700" },
+  { tag: tg.emphasis, fontStyle: "italic" },
+  { tag: tg.strikethrough, textDecoration: "line-through" },
+  { tag: [tg.link, tg.url], color: "var(--accent)", textDecoration: "underline" },
+  { tag: tg.monospace, color: "var(--accent)" },
+  { tag: tg.quote, color: "var(--fg-mute)", fontStyle: "italic" },
+  { tag: [tg.list, tg.meta], color: "var(--fg-mute)" }
+]);
+
+function wrapCmd(a, b) {
+  return ({ state, dispatch }) => {
+    dispatch(state.update(state.changeByRange((r) => {
+      const text = state.sliceDoc(r.from, r.to);
+      return {
+        changes: { from: r.from, to: r.to, insert: a + text + b },
+        range: EditorSelection.range(r.from + a.length, r.from + a.length + text.length)
+      };
+    })));
+    return true;
+  };
+}
+
+function insertLinkCmd({ state, dispatch }) {
+  dispatch(state.update(state.changeByRange((r) => {
+    const sel = state.sliceDoc(r.from, r.to);
+    const text = sel || "link text";
+    const insert = `[${text}](url)`;
+    const urlStart = r.from + 1 + text.length + 2;
+    return {
+      changes: { from: r.from, to: r.to, insert },
+      range: EditorSelection.range(urlStart, urlStart + 3)
+    };
+  })));
+  return true;
+}
+
+function createEditor(parent, doc, onChange) {
+  return new EditorView({
+    parent,
+    state: EditorState.create({
+      doc,
+      extensions: [
+        lineNumbers(),
+        highlightActiveLine(),
+        highlightActiveLineGutter(),
+        drawSelection(),
+        dropCursor(),
+        history(),
+        indentOnInput(),
+        bracketMatching(),
+        closeBrackets(),
+        highlightSelectionMatches(),
+        syntaxHighlighting(mdHighlight),
+        markdown({ base: markdownLanguage }),
+        EditorView.lineWrapping,
+        cmTheme,
+        keymap.of([
+          ...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap,
+          indentWithTab,
+          { key: "Mod-b", run: wrapCmd("**", "**") },
+          { key: "Mod-i", run: wrapCmd("*", "*") },
+          { key: "Mod-`", run: wrapCmd("`", "`") },
+          { key: "Mod-k", run: insertLinkCmd }
+        ]),
+        EditorView.updateListener.of((v) => {
+          if (v.docChanged) onChange(v.state.doc.toString());
+        })
+      ]
+    })
+  });
+}
+
+const getDoc = () => state.view.state.doc.toString();
+const setDoc = (s) => state.view.dispatch({
+  changes: { from: 0, to: state.view.state.doc.length, insert: s }
+});
+
+/* =================== Marked + hljs + mermaid =================== */
+marked.use({
+  gfm: true,
+  breaks: false,
+  renderer: {
+    code({ text, lang }) {
+      if (lang === "mermaid") {
+        const id = "mmd-" + Math.random().toString(36).slice(2, 10);
+        return `<div class="mermaid" id="${id}" data-mmd="${encodeURIComponent(text)}"></div>`;
+      }
+      const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
+      const html = hljs.highlight(text, { language, ignoreIllegals: true }).value;
+      return `<pre><code class="hljs language-${language}">${html}</code></pre>`;
+    }
+  }
+});
+
+async function getMermaid() {
+  if (!_mermaidMod) {
+    const mod = await import("mermaid");
+    _mermaidMod = mod.default;
+  }
+  _mermaidMod.initialize({
+    startOnLoad: false,
+    theme: THEMES[state.theme].type === "dark" ? "dark" : "default",
+    securityLevel: "strict",
+    fontFamily: "system-ui, -apple-system, sans-serif"
+  });
+  return _mermaidMod;
+}
+
+/* =================== Sanitizer (DOM-walker, no deps) =================== */
+const DANGEROUS = new Set(["SCRIPT","STYLE","IFRAME","OBJECT","EMBED","LINK","META","BASE"]);
+function sanitize(html) {
+  const tpl = document.createElement("template");
+  tpl.innerHTML = html;
+  const walker = document.createTreeWalker(tpl.content, NodeFilter.SHOW_ELEMENT);
+  const remove = [];
+  let n;
+  while ((n = walker.nextNode())) {
+    if (DANGEROUS.has(n.tagName)) { remove.push(n); continue; }
+    for (const a of [...n.attributes]) {
+      const name = a.name.toLowerCase();
+      if (name.startsWith("on")) n.removeAttribute(a.name);
+      else if ((name === "href" || name === "src") && /^\s*javascript:/i.test(a.value)) {
+        n.setAttribute(a.name, "#");
+      }
+    }
+  }
+  for (const x of remove) x.remove();
+  return tpl.innerHTML;
+}
+
+/* =================== Preview rendering =================== */
+function slugify(s, seen) {
+  const base = s.toLowerCase().replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-") || "section";
+  const n = seen.get(base) || 0;
+  seen.set(base, n + 1);
+  return n === 0 ? base : `${base}-${n}`;
+}
+
+async function renderPreview() {
+  const my = ++renderToken;
+  const html = sanitize(marked.parse(getDoc()));
+  if (my !== renderToken) return;
+  const pv = $("preview");
+  pv.innerHTML = html;
+
+  const seen = new Map();
+  const headings = [...pv.querySelectorAll("h1,h2,h3,h4,h5,h6")];
+  for (const h of headings) h.id = slugify(h.textContent, seen);
+  for (const a of pv.querySelectorAll('a[href^="http"]')) {
+    a.target = "_blank"; a.rel = "noopener noreferrer";
+  }
+  renderOutline(headings.map((h) => ({ level: +h.tagName[1], text: h.textContent, id: h.id })));
+
+  const mmd = pv.querySelectorAll(".mermaid[data-mmd]");
+  if (mmd.length) {
+    const mermaid = await getMermaid();
+    if (my !== renderToken) return;
+    for (const el of mmd) {
+      const code = decodeURIComponent(el.dataset.mmd);
+      try {
+        const { svg } = await mermaid.render(el.id + "-svg", code);
+        if (my !== renderToken) return;
+        el.innerHTML = svg;
+      } catch (e) {
+        el.innerHTML = `<pre class="mmd-err">${escapeHtml(String(e?.message || e))}\n\n${escapeHtml(code)}</pre>`;
+      }
+      el.removeAttribute("data-mmd");
+    }
+  }
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+function renderOutline(items) {
+  const ol = $("ol");
+  ol.innerHTML = "";
+  if (!items.length) {
+    const d = document.createElement("div");
+    d.className = "empty"; d.textContent = "No headings yet.";
+    ol.appendChild(d); return;
+  }
+  for (const h of items) {
+    const a = document.createElement("a");
+    a.textContent = h.text; a.href = "#" + h.id;
+    a.className = "l" + h.level; a.title = h.text;
+    a.onclick = (e) => {
+      e.preventDefault();
+      document.getElementById(h.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    ol.appendChild(a);
+  }
+}
+
+/* =================== Theme system =================== */
+function applyTheme(id) {
+  const t = THEMES[id];
+  if (!t) return;
+  state.theme = id;
+  for (const [k, v] of Object.entries(t.vars)) {
+    document.documentElement.style.setProperty(k, v);
+  }
+  document.documentElement.dataset.theme = t.type;
+  $("hljs-css").href = `https://esm.sh/highlight.js@11.10.0/styles/${t.hljs}.css`;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t.vars["--bg"]);
+  $("themeSelect").value = id;
+  localStorage.setItem("meridian:theme", id);
+  if (state.view) renderPreview();
+}
+
+function buildThemePicker() {
+  const sel = $("themeSelect");
+  const groups = { light: [], dark: [] };
+  for (const [id, t] of Object.entries(THEMES)) groups[t.type].push([id, t.name]);
+  for (const type of ["light", "dark"]) {
+    if (!groups[type].length) continue;
+    const og = document.createElement("optgroup");
+    og.label = type === "light" ? "Light" : "Dark";
+    for (const [id, name] of groups[type]) {
+      const o = document.createElement("option");
+      o.value = id; o.textContent = name;
+      og.appendChild(o);
+    }
+    sel.appendChild(og);
+  }
+  sel.addEventListener("change", () => applyTheme(sel.value));
+}
+
+/* =================== Default doc =================== */
+const DEFAULT = `# Welcome to Meridian
+
+A markdown editor and previewer — a PWA inspired by [Clearly](https://clearly.md/).
+
+## What's here
+
+- **CodeMirror** editor with markdown syntax highlighting
+- **Live preview** with GitHub Flavored Markdown
+- Code blocks colored by *highlight.js*
+- **Mermaid** diagrams
+- 11 built-in themes (light + dark); add more by appending to \`THEMES\`
+- Open & save \`.md\` files (File System Access where available)
+- Works **offline** — install it from your browser
+
+## Code
+
+\`\`\`js
+function greet(name) {
+  return \`Hello, \${name}!\`;
+}
+\`\`\`
+
+## Diagram
+
+\`\`\`mermaid
+graph LR
+  A[Write] --> B[Preview]
+  B --> C[Export PDF]
+\`\`\`
+
+## Tasks
+
+- [x] Open or create a file
+- [ ] Pick a theme you like
+- [ ] Save (Ctrl/Cmd+S)
+
+## Shortcuts
+
+| Action       | Shortcut               |
+|--------------|------------------------|
+| Bold         | Ctrl/Cmd + B           |
+| Italic       | Ctrl/Cmd + I           |
+| Inline code  | Ctrl/Cmd + \`          |
+| Link         | Ctrl/Cmd + K           |
+| Find         | Ctrl/Cmd + F           |
+| New / Open   | Ctrl/Cmd + N / O       |
+| Save / As    | Ctrl/Cmd + S / Shift+S |
+| Print / PDF  | Ctrl/Cmd + P           |
+`;
+
+/* =================== File I/O =================== */
+const fileTypes = [{
+  description: "Markdown",
+  accept: { "text/markdown": [".md", ".markdown"], "text/plain": [".txt"] }
+}];
+
+async function openFile() {
+  try {
+    if ("showOpenFilePicker" in window) {
+      const [h] = await showOpenFilePicker({ types: fileTypes, multiple: false });
+      const f = await h.getFile();
+      loadDoc(await f.text(), f.name, h);
+    } else {
+      const inp = $("finput");
+      inp.onchange = async () => {
+        const f = inp.files?.[0]; inp.value = "";
+        if (!f) return;
+        loadDoc(await f.text(), f.name, null);
+      };
+      inp.click();
+    }
+  } catch (e) { if (e?.name !== "AbortError") alert("Open failed: " + e.message); }
+}
+
+function loadDoc(text, name, handle) {
+  setDoc(text);
+  state.handle = handle; state.lastSaved = text;
+  setName(name); setDirty(false);
+  localStorage.setItem("meridian:draft", text);
+}
+
+async function save() {
+  const text = getDoc();
+  try {
+    if (state.handle?.createWritable) {
+      const w = await state.handle.createWritable();
+      await w.write(text); await w.close();
+      state.lastSaved = text; setDirty(false);
+    } else { await saveAs(); }
+  } catch (e) { if (e?.name !== "AbortError") alert("Save failed: " + e.message); }
+}
+
+async function saveAs() {
+  const text = getDoc();
+  try {
+    if ("showSaveFilePicker" in window) {
+      const h = await showSaveFilePicker({ suggestedName: state.name, types: fileTypes });
+      const w = await h.createWritable();
+      await w.write(text); await w.close();
+      state.handle = h; state.lastSaved = text;
+      setName(h.name); setDirty(false);
+    } else {
+      const blob = new Blob([text], { type: "text/markdown" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = state.name;
+      a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      state.lastSaved = text; setDirty(false);
+    }
+  } catch (e) { if (e?.name !== "AbortError") alert("Save failed: " + e.message); }
+}
+
+function newDoc() {
+  if (state.dirty && !confirm("Discard unsaved changes?")) return;
+  setDoc(""); state.handle = null; state.lastSaved = "";
+  setName("Untitled.md"); setDirty(false);
+}
+
+const setDirty = (d) => { state.dirty = d; $("dirty").hidden = !d; };
+const setName  = (n) => { state.name = n; $("docName").textContent = n; };
+
+/* =================== Init =================== */
+function init() {
+  buildThemePicker();
+  const savedTheme = localStorage.getItem("meridian:theme");
+  const fallback = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  applyTheme(savedTheme && THEMES[savedTheme] ? savedTheme : fallback);
+
+  const initial = localStorage.getItem("meridian:draft") || DEFAULT;
+  state.lastSaved = initial;
+
+  let debounce;
+  state.view = createEditor($("editor"), initial, (text) => {
+    localStorage.setItem("meridian:draft", text);
+    setDirty(text !== state.lastSaved);
+    clearTimeout(debounce);
+    debounce = setTimeout(renderPreview, 120);
+  });
+
+  renderPreview();
+
+  $("new").onclick = newDoc;
+  $("open").onclick = openFile;
+  $("save").onclick = save;
+  $("saveas").onclick = saveAs;
+  $("print").onclick = () => window.print();
+  $("outlineBtn").onclick = () => {
+    const a = document.querySelector(".outline");
+    a.hidden = !a.hidden;
+  };
+  for (const b of document.querySelectorAll(".mode")) {
+    b.onclick = () => {
+      document.querySelector(".ws").dataset.mode = b.dataset.mode;
+      for (const x of document.querySelectorAll(".mode")) x.classList.toggle("on", x === b);
+    };
+  }
+
+  window.addEventListener("keydown", (e) => {
+    const mod = e.metaKey || e.ctrlKey;
+    if (!mod) return;
+    const k = e.key.toLowerCase();
+    if (k === "s" && !e.shiftKey) { e.preventDefault(); save(); }
+    else if (k === "s" && e.shiftKey) { e.preventDefault(); saveAs(); }
+    else if (k === "o") { e.preventDefault(); openFile(); }
+    else if (k === "n" && !e.shiftKey) { e.preventDefault(); newDoc(); }
+  });
+  window.addEventListener("beforeunload", (e) => {
+    if (state.dirty) { e.preventDefault(); e.returnValue = ""; }
+  });
+
+  if ("launchQueue" in window) {
+    launchQueue.setConsumer(async (p) => {
+      if (!p.files?.length) return;
+      const h = p.files[0];
+      const f = await h.getFile();
+      if (state.dirty && !confirm("Discard unsaved changes to open " + f.name + "?")) return;
+      loadDoc(await f.text(), f.name, h);
+    });
+  }
+
+  if ("serviceWorker" in navigator) {
+    addEventListener("load", () =>
+      navigator.serviceWorker.register("./sw.js").catch(() => {}));
+  }
+}
+
+init();
+</script>
+</body>
+</html>
